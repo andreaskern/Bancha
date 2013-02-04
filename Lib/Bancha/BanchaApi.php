@@ -101,7 +101,7 @@ class BanchaApi {
 		{
 			if (!in_array($filteredModel, $models))
 			{
-				throw new MissingModelException(array('class' => $filteredModel));
+				throw new MissingBanchaModelException(array('class' => $filteredModel));
 			}
 		}
 		return $filteredModels;
