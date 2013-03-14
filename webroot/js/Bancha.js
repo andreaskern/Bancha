@@ -1,10 +1,10 @@
 /*!
  *
  * Bancha Project : Seamlessly integrates CakePHP with ExtJS and Sencha Touch (http://banchaproject.org)
- * Copyright 2011-2012 StudioQ OG
+ * Copyright 2011-2013 StudioQ OG
  *
  * @package       Bancha
- * @copyright     Copyright 2011-2012 StudioQ OG
+ * @copyright     Copyright 2011-2013 StudioQ OG
  * @link          http://banchaproject.org Bancha Project
  * @since         Bancha v 0.0.2
  * @author        Roland Schuetz <mail@rolandschuetz.at>
@@ -906,7 +906,7 @@ Ext.define('Bancha', {
      * Loads and instanciates a model if not already done and then
      * calls the callback function.  
      * 
-     * If Bancha is not already initialized it will wait for link Ext.isReady
+     * If Bancha is not already initialized it will wait for {@link http://docs.sencha.com/ext-js/4-1/#!/api/Ext-property-isReady Ext.isReady}
      * and calls {@link Bancha#init} before model creation.  
      * 
      * See {@link Bancha Bancha class explaination} for an example.
@@ -1194,7 +1194,7 @@ Ext.define('Bancha', {
         window.console.log(typeText+': '+message);
     },
     /**
-     * In production mode (or if errors occur when Bancha is not initialized) this function will be called
+     * In production mode (or if errors occur when Bancha is not initialized) this function will be called. 
      * This function will log the error to the server and then throw it.
      * You can overwrite this function with your own implementation at any time.
      *
@@ -1235,6 +1235,9 @@ Ext.define('Bancha', {
 	},
 	
     /**
+     * @deprecated Please only define your model on the backend to have a clean separation of concerns. 
+     * This function will be removed soon.
+     * 
      * This method creates a {@link Bancha.data.Model} with your additional model configs,
      * if you don't have any additional configs just use the convienience method {@link #getModel}.  
      * 
@@ -1243,8 +1246,8 @@ Ext.define('Bancha', {
      * 
      * @param {String} modelName The name of the model
      * @param {Object} modelConfig A standard Ext.data.Model config object
-                                     In ExtJS this will be directly applied.
-                                     In Sencha Touch this iwll be applied to the config property.
+                                   In ExtJS this will be directly applied.
+                                   In Sencha Touch this iwll be applied to the config property.
      * @return {Boolean} Returns true is model was created successfully
      */
     createModel: function(modelName, modelConfig) {
@@ -1254,8 +1257,15 @@ Ext.define('Bancha', {
             safeDirectFn,
             // ENDIF
             stub,
-            idProperty;
+            idProperty,
+            configWithRootPropertySet;
         
+        // IFDEBUG
+        if(Ext.isDefined(modelConfig) && Ext.Logger && Ext.Logger.deprecate) {
+            Ext.Logger.deprecate('Bancha.created is deprecated and will be removed soon. Please only define your model on the backend to have a clean separation of concerns.', 1);
+        }
+        // ENDIF
+
         if(!Bancha.initialized) {
             Bancha.init();
         }
@@ -1346,7 +1356,22 @@ Ext.define('Bancha', {
             return fakeFn;
         }; 
         // ENDIF
-        
+
+        // Sencha Touch uses the new rootProperty property for configuring the reader and writer
+        // ExtJS still uses root. 
+        // This all would be fine, but now Sencha Touch throws deprecated warning for using the old
+        // ExtJS syntax, so we can't just assign both anymore, instead we need to create a config
+        // prototype here
+        if(Ext.versions.touch) {
+            configWithRootPropertySet = {
+                rootProperty: 'data'
+            };
+        } else {
+            configWithRootPropertySet = {
+                root: 'data'
+            };
+        }
+
         // create the metadata
         modelConfig = modelConfig || {};
         stub = this.getStubsNamespace()[modelName];
@@ -1381,23 +1406,17 @@ Ext.define('Bancha', {
                 // IFDEBUG
                 directFn: safeDirectFn(stub,'read',modelName),
                 // ENDIF
-                reader: {
+                reader: Ext.apply({
                     type: 'json',
-                    root: 'data', // <-- this is for ExtJS
-                    rootProperty: 'data', // <-- this is for Sencha Touch
                     messageProperty: 'message'
-                },
-                writer: (modelConfig.forceConsistency) ? {
+                }, configWithRootPropertySet),
+                writer: (modelConfig.forceConsistency) ? Ext.apply({
                     type: 'consitentjson',
-                    writeAllFields: false,
-                    root: 'data', // <-- this is for ExtJS
-                    rootProperty: 'data' // <-- this is for Sencha Touch
-                } : {
+                    writeAllFields: false
+                }, configWithRootPropertySet) : Ext.apply({
                     type: 'jsondate',
-                    writeAllFields: false,
-                    root: 'data', // <-- this is for ExtJS
-                    rootProperty: 'data' // <-- this is for Sencha Touch
-                },
+                    writeAllFields: false
+                }, configWithRootPropertySet),
                 listeners: {
                     exception: this.onRemoteException || Ext.emptyFn
                 }
@@ -1449,33 +1468,33 @@ Ext.define('Bancha', {
      */
     Localizer: {
         /**
-         * @private
          * @property
-         * The default value for Bancha.t's langCode.
-         * Use the getter and setter methods!
+         * The default language code for translations.   
+         * Use the getter and setter methods!   
+         * (Default: 'eng')
          */
         currentLang: 'eng',
         /**
-         * Returns the default language for {@link Bancha.Localizer.getLocaleStrings},
-         * {@link Bancha.Localizer.getLocalizedStringWithReplacements} and {@link Bancha.t}
+         * Returns the default language for {@link Bancha.Localizer#getLocalizedString},
+         * {@link Bancha.Localizer#getLocalizedStringWithReplacements} and {@link Bancha#t}.
          *
-         * @return {String} the three letter code of the current language, as in cakephp, e.g. 'eng'
+         * @return {String} The three letter code of the current language, as in cakephp, e.g. 'eng'
          */
         getCurrentLanguage: function() {
             return this.currentLang;
         },
         /**
-         * Sets a new default language for {@link Bancha.Localizer.getLocaleStrings},
-         * {@link Bancha.Localizer.getLocalizedStringWithReplacements} and {@link Bancha.t}
+         * Sets a new default language for {@link Bancha.Localizer#getLocalizedString},
+         * {@link Bancha.Localizer#getLocalizedStringWithReplacements} and {@link Bancha#t}.
          *
-         * @param lang {String} the three letter code of the new language, as in cakephp, e.g. 'eng'
+         * @param {String} lang The three letter code of the new language, as in cakephp, e.g. 'eng'
          */
         setCurrentLanguage: function(lang) {
             this.currentLang = lang;
         },
         /**
-         * You can use this function to preload translations
-         * @param {String} langCode a three letter language code, same as in cakephp (Default is currentLang property)
+         * You can use this function to preload translations.
+         * @param {String} langCode A three letter language code, same as in cakephp (Default is {@link #currentLang} property)
          */
         preloadLanguage: function(langCode) {
             if (!this.locales) {
@@ -1485,7 +1504,7 @@ Ext.define('Bancha', {
         },
         /**
          * @private
-         * @param {String} langCode a three letter language code, same as in cakephp
+         * @param {String} langCode A three letter language code, same as in cakephp
          * @param {Boolean} asnyc False to block while loading (Default: false)
          * @return {Array} the loaded array of translations
          */
@@ -1511,7 +1530,7 @@ Ext.define('Bancha', {
         },
         /**
          * @private
-         * @param {String} langCode a three letter language code, same as in cakephp
+         * @param {String} langCode A three letter language code, same as in cakephp
          * @return {Array} the loaded array of translations
          */
         getLocaleStrings: function(locale) {
@@ -1533,11 +1552,13 @@ Ext.define('Bancha', {
             return localeStrings;
         },
         /**
-         * Translates an given string to the given language, 
-         * or the one set in Bancha.Localizer.currentLang.
-         * @param {String} key the string to translate
-         * @param {String} langCode a three letter language code, same as in 
-         *                 cakephp (Default from Bancha.Localizer.currentLang)
+         * Translates an given string to the given language.
+         * 
+         * If no locale is defined the language is taken from {@link #currentLang}.
+         * 
+         * @param {String} key The string to translate
+         * @param {String} langCode A three letter language code, same as in cakephp (Default from {@link #currentLang})
+         * @return {String} The translated string
          */
         getLocalizedString: function(key, locale) {
             var me = this,
@@ -1563,11 +1584,13 @@ Ext.define('Bancha', {
         },
         /**
          * Translates an given string the current language
-         * (see {@link Bancha.Localizer.currentLang}.
+         * (see {@link #currentLang}).
          *
          * Additional arguments are used to replace %s (for string) and %d (for number).
-         * @param {String} key the string to translate
-         * @param {String...} replacements An arbitrary number of additional strings to replace %s in the first one
+         *
+         * @param {String} key The string to translate
+         * @param {String...} replacements An arbitrary number of additional strings used to replace %s (for string) and %d (for number) in the key string.
+         * @return {String} The translated string
          */
         getLocalizedStringWithReplacements: function(key, replacement1, replacement2, replacement3) {
             // translate
@@ -1610,15 +1633,17 @@ Ext.define('Bancha', {
             return result;
         }
     },
-    /** 
+    /**
      * Translates an given string the current language
-     * (see {@link Bancha.Localizer.currentLang}.
+     * (see {@link Bancha.Localizer#currentLang}).
      *
      * Additional arguments are used to replace %s (for string) and %d (for number).
      *
-     * This is a convenience function for Bancha.Localizer.getLocalizedStringWithReplacements
-     * @param {String} key the string to translate
-     * @param {String...} replacements An arbitrary number of additional strings to replace %s in the first one
+     * This is a convenience function for {@link Bancha.Localizer#getLocalizedStringWithReplacements}.
+     * 
+     * @param {String} key The string to translate
+     * @param {String...} replacements An arbitrary number of additional strings used to replace %s (for string) and %d (for number) in the key string.
+     * @return {String} The translated string
      * @member Bancha
      */
     t: function(key,  replacement1, replacement2, replacement3) {
@@ -1627,63 +1652,67 @@ Ext.define('Bancha', {
 });
 
 
-/**
- * @singleton
- * @class Bancha.log
- *
- * This is not a class, but an overloaded function which logs a message.
- *
- * If the debug level is 0 (production mode) or forceServerlog is
- * true, and the type is not 'info', then the error will be send to 
- * the server and logged to app/tmp/logs/js_error.log (for types 
- * 'error' and 'warn') or app/tmp/logs/missing_translation.log 
- * (for type 'missing_translation').
- *
- * If the debug level is bigger then zero and a console is availabe
- * it is written to the console. If no console is available it is
- * instead displayed as a Ext.Msg.alert.
- * 
- * example usage:
- *     Bancha.log('My error message');
- *     Bancha.log('My info message','info');
- *     
- *     Bancha.log.info('My info message');
- *     Bancha.log.warn('My warning message');
- *     Bancha.log.error('My error message');
- * 
- */
-/**
- * Convenience function for logging with type 'info', see {@link Bancha.log}
- * 
- * @member Bancha.log
- * @param  {String}  message        The info message
- * @param  {Boolean} forceServerlog (optional) True to write the error to the server, even in debug mode (default to false)
- * @return void
- */
-Bancha.log.info = function(message, forceServerlog) {
-    Bancha.log(message, 'info', forceServerlog || false);
-};
-/**
- * Convenience function for logging with type 'warn', see {@link Bancha.log}
- * 
- * @member Bancha.log
- * @param  {String}  message        The warn message
- * @param  {Boolean} forceServerlog (optional) True to write the error to the server, even in debug mode (default to false)
- * @return void
- */
-Bancha.log.warn = function(message, forceServerlog) {
-    Bancha.log(message, 'warn', forceServerlog || false);
-};
-/**
- * Convenience function for logging with type 'error', see {@link Bancha.log}
- * 
- * @member Bancha.log
- * @param  {String}  message        The error message
- * @param  {Boolean} forceServerlog (optional) True to write the error to the server, even in debug mode (default to false)
- * @return void
- */
-Bancha.log.error = function(message, forceServerlog) {
-    Bancha.log(message, 'error', forceServerlog || false);
-};
+Ext.require([
+    'Bancha' // make sure Bancha is initialized before we can set up the shortcuts
+], function() {
+    /**
+     * @singleton
+     * @class Bancha.log
+     *
+     * This is not a class, but an overloaded function which logs a message.
+     *
+     * If the debug level is 0 (production mode) or forceServerlog is
+     * true, and the type is not 'info', then the error will be send to 
+     * the server and logged to app/tmp/logs/js_error.log (for types 
+     * 'error' and 'warn') or app/tmp/logs/missing_translation.log 
+     * (for type 'missing_translation').
+     *
+     * If the debug level is bigger then zero and a console is availabe
+     * it is written to the console. If no console is available it is
+     * instead displayed as a Ext.Msg.alert.
+     * 
+     * example usage:
+     *     Bancha.log('My error message');
+     *     Bancha.log('My info message','info');
+     *     
+     *     Bancha.log.info('My info message');
+     *     Bancha.log.warn('My warning message');
+     *     Bancha.log.error('My error message');
+     * 
+     */
+    /**
+     * Convenience function for logging with type 'info', see {@link Bancha.log}
+     * 
+     * @member Bancha.log
+     * @param  {String}  message        The info message
+     * @param  {Boolean} forceServerlog (optional) True to write the error to the server, even in debug mode (default to false)
+     * @return void
+     */
+    Bancha.log.info = function(message, forceServerlog) {
+        Bancha.log(message, 'info', forceServerlog || false);
+    };
+    /**
+     * Convenience function for logging with type 'warn', see {@link Bancha.log}
+     * 
+     * @member Bancha.log
+     * @param  {String}  message        The warn message
+     * @param  {Boolean} forceServerlog (optional) True to write the error to the server, even in debug mode (default to false)
+     * @return void
+     */
+    Bancha.log.warn = function(message, forceServerlog) {
+        Bancha.log(message, 'warn', forceServerlog || false);
+    };
+    /**
+     * Convenience function for logging with type 'error', see {@link Bancha.log}
+     * 
+     * @member Bancha.log
+     * @param  {String}  message        The error message
+     * @param  {Boolean} forceServerlog (optional) True to write the error to the server, even in debug mode (default to false)
+     * @return void
+     */
+    Bancha.log.error = function(message, forceServerlog) {
+        Bancha.log(message, 'error', forceServerlog || false);
+    };
+}); //eo require Bancha
 
 // eof
