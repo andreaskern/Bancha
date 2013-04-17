@@ -152,6 +152,11 @@ class BanchaCrudTest extends CakeTestCase {
 		$this->assertEquals('rpc', $responses[0]->type);
 		$this->assertEquals(1, $responses[0]->tid);
 		$this->assertEquals(1, count($responses));
+
+		// test if the data really got changed
+		$article = ClassRegistry::init('Article');
+		$article->read(null,988);
+		$this->assertEquals('fööbar', $article->data['Article']['title']);
 	}
 	
 	/**
