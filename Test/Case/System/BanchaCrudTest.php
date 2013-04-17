@@ -120,6 +120,39 @@ class BanchaCrudTest extends CakeTestCase {
 		$this->assertEquals(1, $responses[0]->tid);
 		$this->assertEquals(1, count($responses));
 	}
+
+	public function testEditUtf8() {
+		// used fixture:
+		// array('id' => 988, 'title' => 'Title 1', 'published' => true, ...)
+		
+		// Buld a request like it looks in Ext JS.
+		$rawPostData = json_encode(array(array(
+			'action'		=> 'Article',
+			'method'		=> 'update',
+			'tid'			=> 1,
+			'type'			=> 'rpc',
+			'data'			=> array(array('data'=>array(
+				'id'			=> 988,
+				'title'			=> 'fööbar',
+				'published'		=> 1,
+			))),
+		)));
+		$dispatcher = new BanchaDispatcher();
+		$responses = json_decode($dispatcher->dispatch(
+			new BanchaRequestCollection($rawPostData), array('return' => true)
+		));
+	
+		$this->assertEquals(988, $responses[0]->result->data->id);
+		$this->assertEquals('fööbar', $responses[0]->result->data->title);
+		$this->assertEquals(1, $responses[0]->result->data->published); // check that all fields are added
+		
+		// general response checks (check dispatcher, collections and transformers)
+		$this->assertEquals('Article', $responses[0]->action);
+		$this->assertEquals('update', $responses[0]->method);
+		$this->assertEquals('rpc', $responses[0]->type);
+		$this->assertEquals(1, $responses[0]->tid);
+		$this->assertEquals(1, count($responses));
+	}
 	
 	/**
 	 * test form submission including the different request form of ext.direct
